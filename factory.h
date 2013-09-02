@@ -13,11 +13,11 @@
 
 using namespace std;
 
-class Pool;
+class Factory;
 
 class Worker{
     public:
-        Worker(Pool *pool);
+        Worker(Factory *factory);
         virtual ~Worker(){};
         
         virtual void work();
@@ -25,7 +25,7 @@ class Worker{
 
         pthread_t tid;
     private:
-        Pool *pool;
+        Factory *factory;
 };
 
 class Job{
@@ -38,10 +38,10 @@ class Job{
         string parameter;
 };
 
-class Pool{
+class Factory{
     public:
-        Pool(const int &pthread_num);
-        ~Pool(){};
+        Factory(const int &pthread_num);
+        ~Factory(){};
         
         void start();
         void destroy();

@@ -10,15 +10,15 @@
 #define DEBUG_PRINT(...) do{}while(false);
 #endif
 
-#include "pool.h"
+#include "factory.h"
 #include <iostream>
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <boost/shared_ptr.hpp>
 
-Worker::Worker(Pool *pool)
-    :pool(pool){
+Worker::Worker(Factory *factory)
+    :factory(factory){
 }
 
 void* Worker::RunHelper(void *ptr){
@@ -29,23 +29,23 @@ void* Worker::RunHelper(void *ptr){
 
 void Worker::work(){
     while(true){
-        pthread_mutex_lock(pool->queue_mutex);
+        pthread_mutex_lock(factory->queue_mutex);
 
-        while(pool->job_queue.empty() && pool->isActive()){
-            pthread_cond_wait(pool->queue_not_empty, pool->queue_mutex); 
+        while(factory->job_queue.empty() && factory->isActive()){
+            pthread_cond_wait(factory->queue_not_empty, factory->queue_mutex); 
         }
 
-        if(!pool->isActive()){
-            pthread_mutex_unlock(pool->queue_mutex);
+        if(!factory->isActive()){
+            pthread_mutex_unlock(factory->queue_mutex);
             pthread_exit(NULL);
         }
 
-        boost::shared_ptr<Job> job = pool->job_queue.front();
-        pool->job_queue.pop();
-        if(pool->job_queue.empty()){
-            pthread_cond_signal(pool->queue_empty);
+        boost::shared_ptr<Job> job = factory->job_queue.front();
+        factory->job_queue.pop();
+        if(factory->job_queue.empty()){
+            pthread_cond_signal(factory->queue_empty);
         }
-        pthread_mutex_unlock(pool->queue_mutex);
+        pthread_mutex_unlock(factory->queue_mutex);
 
         DEBUG_PRINT("GET A JOB TO RUN: %x\n", pthread_self());
         job->doJob();
@@ -61,7 +61,7 @@ void Job::doJob(){
     sleep(1);
 }
 
-Pool::Pool(const int &pthread_num)
+Factory::Factory(const int &pthread_num)
 :pthread_num(pthread_num){
     queue_mutex = new pthread_mutex_t;
     pthread_mutex_init(queue_mutex, NULL);
@@ -79,11 +79,11 @@ Pool::Pool(const int &pthread_num)
     DEBUG_PRINT("FINISH POOL INIT\n");
 }
 
-void Pool::start(){
+void Factory::start(){
     active = true;
 }
 
-void Pool::destroy(){
+void Factory::destroy(){
     pthread_mutex_lock(queue_mutex);
     while(!job_queue.empty()){
         pthread_cond_wait(queue_empty, queue_mutex);
@@ -103,7 +103,7 @@ void Pool::destroy(){
     return;
 }
 
-bool Pool::insert(const boost::shared_ptr<Job> &job){
+bool Factory::insert(const boost::shared_ptr<Job> &job){
     DEBUG_PRINT("INSERTING JOB\n");
 
     pthread_mutex_lock(queue_mutex);
