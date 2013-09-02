@@ -15,19 +15,21 @@ using namespace std;
 
 class Factory;
 
+/* The pThread class Worker to do the job */
 class Worker{
     public:
         Worker(Factory *factory);
         virtual ~Worker(){};
         
         virtual void work();
-        static void* RunHelper(void*);
+        static void* RunHelper(void*);  //pthread_create() just can use the static function;
 
         pthread_t tid;
     private:
         Factory *factory;
 };
 
+/* Job Class define the job to be worked */
 class Job{
     public:
         Job(string command, string parameter);
@@ -45,21 +47,21 @@ class Factory{
         
         void start();
         void destroy();
-        bool insert(const boost::shared_ptr<Job> &job);
+        bool insert(const boost::shared_ptr<Job> &job);     //insert a job to the job queue;
 
         bool isActive(){
             return active;
         };
  
-        pthread_mutex_t *queue_mutex;
+        /* the mutex and condition for the queue for synchronization */
+        pthread_mutex_t *queue_mutex; 
         pthread_cond_t *queue_not_empty;
         pthread_cond_t *queue_empty;
+
         queue< boost::shared_ptr<Job> > job_queue;
     private:
         bool active;
         const int pthread_num;
         vector< boost::shared_ptr<Worker> > workers;
 };
-
 #endif
-
